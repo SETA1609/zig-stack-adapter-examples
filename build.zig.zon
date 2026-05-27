@@ -1,0 +1,23 @@
+.{
+    .name = .zig_stack_adapter_examples,
+    .version = "0.0.0",
+    .fingerprint = 0x5886799e13e0341e,
+    .minimum_zig_version = "0.16.0",
+
+    .dependencies = .{
+        // Local-path deps into libs/ — UNCOMMENT after adding the submodules
+        // (see libs/README.md). Path deps build each lib from the local checkout;
+        // build.zig then links the lib's compiled static-library artifact.
+        // .platform = .{ .path = "libs/zig-cpp-platform-stack-adapter" },
+        // .vulkan_stack = .{ .path = "libs/zig-cpp-vulkan-stack-adapter" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "shared",
+        "examples",
+        "README.md",
+        "LICENSE",
+    },
+}
