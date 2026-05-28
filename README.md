@@ -40,18 +40,17 @@ The adapters live under [`libs/`](libs/) as git submodules. `build.zig.zon` refe
 
 ## The ladder
 
-Each app pulls a specific adapter milestone into existence — see [`docs/ladder.md`](docs/ladder.md).
+Each app pulls a specific adapter milestone into existence — see [`docs/ladder.md`](docs/ladder.md) for the full per-rung ladder (17 rungs) + ordering rationale. Grouped here by lib-milestone phase:
 
-| App | platform → | vulkan → |
-| --- | --- | --- |
-| **clear-color** ← *first* | v0.6.0 | v0.2.0 |
-| hello-triangle | (v0.6.0) | v0.3.0 (VMA) |
-| snake | (v0.6.0) | v0.3.0 |
-| breakout | (v0.6.0) | v0.3.0 |
-| tetris | v0.7.0 (input contexts) | v0.3.0 |
-| pong | v0.8.0 (gamepads) | v0.3.0 |
-| life | (v0.6.0) | v0.4.0 (shaders) |
-| hello-cube ← *tail (3D)* | (v0.6.0) | v0.4.0 + depth |
+| Phase | Apps | platform → | vulkan → |
+| --- | --- | --- | --- |
+| Foundation | event-logger, clear-color | v0.6.0 | v0.2.0 |
+| First pipeline | hello-triangle | (v0.6.0) | v0.3.0 |
+| Games & texturing | snake, asteroids, breakout, space-invaders, image-viewer | v0.6.0 | v0.3.0 |
+| Input depth | tetris, replay-demo | v0.7.0 | v0.3.0 |
+| Devices & persistence | pong, 2048, typing-game | v0.8.0 | v0.3.0 |
+| Shaders & compute | life, particles, shader-playground | (v0.6.0) | v0.4.0 |
+| 3D smoke *(tail)* | hello-cube | (v0.6.0) | v0.4.0 + depth |
 
 ## Status & how to run
 

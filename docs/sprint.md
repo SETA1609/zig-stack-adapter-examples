@@ -56,6 +56,6 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
 
 ## Out of this sprint (next rungs)
 
-- v0.2.0 — **hello-triangle**: the first graphics pipeline + first vertex buffer + (precompiled) shaders — one static triangle (needs vulkan v0.3.0 / VMA).
-- v0.3.0 — **snake**: a real fixed-timestep game loop + action input, reusing the triangle's pipeline.
-- Later — breakout (instancing), tetris (input contexts), pong (gamepads), life (shaders), hello-cube (3D smoke). See [`ROADMAP.md`](ROADMAP.md).
+- v0.2.0 — **First pipeline**: hello-triangle (first graphics pipeline + vertex buffer + precompiled shaders; vulkan v0.3.0 / VMA).
+- v0.3.0 — **Games & texturing**: snake, asteroids, breakout, then **space-invaders** (introduces the texture path) and image-viewer (`file_drop`).
+- Later — input depth (tetris, replay-demo), devices & persistence (pong, 2048, typing-game), shaders & compute (life, particles, shader-playground), 3D smoke (hello-cube). See [`ROADMAP.md`](ROADMAP.md).

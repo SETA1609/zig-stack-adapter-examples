@@ -4,21 +4,20 @@
 
 ## How releases map to the ladder
 
-Each ladder rung is one example-repo release. A release is cut when its app **builds and runs correctly** and the relevant `nm` decoupling check is green. The adapter columns are the *minimum* lib versions an app builds against — earlier rungs unblock later ones.
+Each release is a **lib-milestone phase** that delivers the ladder rungs sharing its gate. A rung is done when it **builds and runs correctly** and the relevant `nm` decoupling check is green. The adapter columns are the *minimum* lib versions the phase builds against — earlier phases unblock later ones. Per-rung detail + the ordering rationale: [`ladder.md`](ladder.md).
 
-| Release | App | platform → | vulkan → | Delivers |
+| Release | Phase | Rungs delivered | platform → | vulkan → |
 | --- | --- | --- | --- | --- |
-| **v0.1.0** ← *next* | **event-logger** + **clear-color** | v0.6.0 | v0.2.0 | the surface bridge end-to-end (window → surface → swapchain → clear → present); both `nm` checks green |
-| **v0.2.0** | hello-triangle | (v0.6.0) | v0.3.0 (VMA) | first graphics pipeline + first vertex buffer + (precompiled) shaders — one static triangle |
-| **v0.3.0** | snake | (v0.6.0) | v0.3.0 | a real fixed-timestep game loop + action input (reuses the triangle's pipeline for its quads) |
-| **v0.4.0** | breakout | (v0.6.0) | v0.3.0 | instancing / batching throughput through VMA |
-| **v0.5.0** | tetris | v0.7.0 (input contexts) | v0.3.0 | the input-context stack (pause pushes `ui_menu`, masks gameplay) |
-| **v0.6.0** | pong | v0.8.0 (gamepads) | v0.3.0 | multi-gamepad + analog axis modifiers |
-| **v0.7.0** | life | (v0.6.0) | v0.4.0 (shaders) | runtime GLSL→SPIR-V (shaderc) + compute + large dynamic buffer churn |
-| **v0.8.0** | hello-cube *(tail / 3D smoke)* | (v0.6.0) | v0.4.0 (shaders) + depth | perspective MVP + a depth attachment — the stack survives 3D |
-| **v1.0.0** | — | — | — | every rung green; both `nm` checks pass; CI matrix green. The set is the engine's reference consumer. |
+| **v0.1.0** ← *next* | Foundation | event-logger, clear-color | v0.6.0 | v0.2.0 |
+| **v0.2.0** | First pipeline | hello-triangle | (v0.6.0) | v0.3.0 (VMA) |
+| **v0.3.0** | Games & texturing | snake, asteroids, breakout, space-invaders, image-viewer | v0.6.0 | v0.3.0 |
+| **v0.4.0** | Input depth | tetris, replay-demo | v0.7.0 | v0.3.0 |
+| **v0.5.0** | Devices & persistence | pong, 2048, typing-game | v0.8.0 | v0.3.0 |
+| **v0.6.0** | Shaders & compute | life, particles, shader-playground | (v0.6.0) | v0.4.0 |
+| **v0.7.0** | 3D smoke *(tail)* | hello-cube | (v0.6.0) | v0.4.0 + depth |
+| **v1.0.0** | Stable | every rung green; both `nm` checks pass; CI matrix green — the set is the engine's reference consumer | — | — |
 
-Rungs beyond v0.1.0 may resequence as the libs' own roadmaps firm up.
+Phases beyond v0.1.0 may resequence as the libs' own roadmaps firm up.
 
 ## Gates that apply to every release
 
@@ -30,7 +29,7 @@ Rungs beyond v0.1.0 may resequence as the libs' own roadmaps firm up.
 
 - macOS target — deferred (tracks the platform lib).
 - Audio-driven or networked toys — not part of the adapter-validation story.
-- Textured / lit / multi-object 3D — `hello-cube` is the 3D ceiling here by design.
+- Textured / lit / multi-object **3D** — `hello-cube` is the 3D ceiling here by design (2D texturing lands earlier, at `space-invaders`).
 
 ## See also
 
