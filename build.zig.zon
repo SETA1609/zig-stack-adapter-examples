@@ -9,7 +9,7 @@
         // checkout; build.zig links the lib's compiled static-library
         // artifact (libs-first / link-the-artifact — see libs/README.md).
         .platform = .{ .path = "libs/zig-cpp-platform-stack-adapter" },
-        // .vulkan_stack = .{ .path = "libs/zig-cpp-vulkan-stack-adapter" },
+        .vulkan_stack = .{ .path = "libs/zig-cpp-vulkan-stack-adapter" },
     },
 
     .paths = .{
@@ -17,6 +17,7 @@
         "build.zig.zon",
         "shared",
         "examples",
+        "tests",
         "README.md",
         "LICENSE",
     },
