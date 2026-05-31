@@ -20,10 +20,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    // const vulkan_dep = b.dependency("vulkan_stack", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    const vulkan_dep = b.dependency("vulkan_stack", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     // Shared comptime surface bridge. Stays inert until vulkan_stack lands —
     // shared/surface.zig is currently a stub with both imports commented out.
@@ -64,6 +64,26 @@ pub fn build(b: *std.Build) void {
     // if (b.args) |args| run_cc.addArgs(args);
     // b.step("clear-color", "Build + run the reactive clear-color example")
     //     .dependOn(&run_cc.step);
+
+    // --- `zig build test-integration` -------------------------------------
+    // Cross-lib integration tests: the platform adapter hands native handles +
+    // required extensions to the vulkan adapter, which makes an instance +
+    // surface (+ device + allocator). Links BOTH artifacts. Gated/skipped until
+    // the vulkan bridges land (see tests/integration_test.zig); needs a display
+    // server + a Vulkan loader.
+    const itest_mod = b.createModule(.{
+        .root_source_file = b.path("tests/integration_test.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    itest_mod.addImport("platform", platform_dep.module("platform"));
+    itest_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
+    itest_mod.linkLibrary(platform_dep.artifact("platform"));
+    itest_mod.linkLibrary(vulkan_dep.artifact("vulkan_stack"));
+    const itests = b.addTest(.{ .root_module = itest_mod });
+    b.step("test-integration", "Run the cross-lib integration tests (skipped until the vulkan bridges land)")
+        .dependOn(&b.addRunArtifact(itests).step);
 }
 
 const ExampleOpts = struct {
