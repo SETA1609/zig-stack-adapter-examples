@@ -5,10 +5,10 @@
     .minimum_zig_version = "0.16.0",
 
     .dependencies = .{
-        // Local-path deps into libs/ — UNCOMMENT after adding the submodules
-        // (see libs/README.md). Path deps build each lib from the local checkout;
-        // build.zig then links the lib's compiled static-library artifact.
-        // .platform = .{ .path = "libs/zig-cpp-platform-stack-adapter" },
+        // Local-path deps into libs/. Each lib builds from its local
+        // checkout; build.zig links the lib's compiled static-library
+        // artifact (libs-first / link-the-artifact — see libs/README.md).
+        .platform = .{ .path = "libs/zig-cpp-platform-stack-adapter" },
         // .vulkan_stack = .{ .path = "libs/zig-cpp-vulkan-stack-adapter" },
     },
 
