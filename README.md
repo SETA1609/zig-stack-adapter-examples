@@ -1,6 +1,6 @@
 # zig-stack-adapter-examples
 
-Tiny standalone apps that exercise the [platform-stack](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) and [vulkan-stack](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) Zig adapters **together** — starting with a reactive clear-color, building toward Snake and friends.
+Tiny standalone apps that exercise the [platform-stack](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) and [vulkan-stack](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) Zig adapters **together** — starting with an event logger and a reactive clear-color, building toward Snake and friends.
 
 Each app consumes the adapters the way a real engine would — the libs live under `libs/`, get **built once into static artifacts**, and the apps **link the compiled artifacts** (not the source). So these double as **integration tests** and **usage examples**.
 
@@ -16,7 +16,7 @@ The two adapters are decoupled by design (the platform side drags no Vulkan; the
 zig-stack-adapter-examples/
 ├── README.md
 ├── LICENSE                       # MIT
-├── build.zig                     # SCAFFOLD — build each lib, link its artifact (TODOs inside)
+├── build.zig                     # wires example run-steps + test-integration (links both lib artifacts)
 ├── build.zig.zon                 # local-path deps into libs/ (no git fetch)
 ├── libs/                         # YOUR adapter sub-repos live here (git submodules)
 │   ├── README.md                 # the build-then-link model + how to add the submodules
@@ -25,8 +25,10 @@ zig-stack-adapter-examples/
 ├── shared/
 │   └── surface.zig               # stub — the comptime platform↔vulkan bridge (you write it)
 ├── examples/
-│   └── clear-color/
-│       └── main.zig              # stub — the first app (you write it)
+│   ├── event-logger/main.zig     # rung 0 — platform-only (stub: hand-write it)
+│   └── clear-color/main.zig      # rung 1 — platform + vulkan (stub)
+├── tests/
+│   └── integration_test.zig      # cross-lib tests (gated) — `zig build test-integration`
 ├── docs/
 │   ├── clear-color.md            # design of the first app (frame loop + lib calls)
 │   ├── ladder.md                 # the full app ladder + the nm decoupling checks
@@ -54,14 +56,25 @@ Each app pulls a specific adapter milestone into existence — see [`docs/ladder
 
 ## Status & how to run
 
-Freshly scaffolded. `build.zig`, the `libs/` submodules, and the `shared/` + `examples/` source are **stubs/TODOs** — the app code is hand-written on purpose (this is a learning project; the scaffolding is here, the implementation is yours).
+The build is wired and the libraries are partway up the ladder:
 
-To get going:
+- **platform adapter** — v0.6.0 core implemented (window, events, time, action-mapped input, Vulkan hand-off).
+- **vulkan adapter** — `vk` re-export + pure-Zig `volk` loader + X11/Wayland surface creators implemented; VMA + shaderc still stubbed.
+- **cross-lib hand-off works** — a platform `.vulkan` window's native handle becomes a Vulkan surface (proven by the integration tests below).
 
-1. Add the adapter sub-repos under `libs/` as submodules — see [`libs/README.md`](libs/README.md).
-2. Wire the build in [`build.zig`](build.zig): build each lib, `linkLibrary` its artifact, `addImport` its module (follow the commented pattern).
-3. Implement [`shared/surface.zig`](shared/surface.zig) and [`examples/clear-color/main.zig`](examples/clear-color/main.zig) per [`docs/clear-color.md`](docs/clear-color.md).
-4. `zig build clear-color`
+Clone with submodules, then:
+
+```sh
+git submodule update --init --recursive
+
+zig build event-logger        # rung 0 — build + run the platform-only example (once you write its main.zig)
+zig build test-integration    # cross-lib tests: platform handles → vulkan instance + surface
+zig build --help              # list available steps
+```
+
+`zig build test-integration` today: **instance + surface hand-off pass; `full_stack` skips until VMA lands.** The integration tests are gated and un-skip as the vulkan bridges are implemented.
+
+The example **app code is still hand-written on purpose** (this is a learning project): `examples/event-logger/main.zig` and `examples/clear-color/main.zig` are stubs you fill in — `docs/clear-color.md` designs the first windowed app end-to-end, and the platform README's quick-start shows the input/window API. The libraries underneath them are real (above).
 
 ## Docs
 
