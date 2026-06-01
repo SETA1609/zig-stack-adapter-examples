@@ -25,8 +25,8 @@ fn gate(implemented: bool) error{SkipZigTest}!void {
 
 /// Flip as the vulkan-stack bridges are implemented (the platform side is done).
 const done = .{
-    .instance_from_platform_extensions = false,
-    .surface_handoff = false,
+    .instance_from_platform_extensions = true,
+    .surface_handoff = true,
     .full_stack = false,
 };
 
