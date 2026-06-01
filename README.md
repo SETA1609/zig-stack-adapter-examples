@@ -59,7 +59,7 @@ Each app pulls a specific adapter milestone into existence — see [`docs/ladder
 The build is wired and the libraries are partway up the ladder:
 
 - **platform adapter** — v0.6.0 core implemented (window, events, time, action-mapped input, Vulkan hand-off).
-- **vulkan adapter** — `vk` re-export + pure-Zig `volk` loader + X11/Wayland surface creators implemented; VMA + shaderc still stubbed.
+- **vulkan adapter** — `vk` re-export + pure-Zig `volk` loader + X11/Wayland surfaces + VMA (C++ bridge) implemented; shaderc + Win32/Android surfaces still stubbed.
 - **cross-lib hand-off works** — a platform `.vulkan` window's native handle becomes a Vulkan surface (proven by the integration tests below).
 
 Clone with submodules, then:
@@ -72,7 +72,7 @@ zig build test-integration    # cross-lib tests: platform handles → vulkan ins
 zig build --help              # list available steps
 ```
 
-`zig build test-integration` today: **instance + surface hand-off pass; `full_stack` skips until VMA lands.** The integration tests are gated and un-skip as the vulkan bridges are implemented.
+`zig build test-integration` today: **all 5 pass** — instance built from the platform's extensions, the surface hand-off, and the full stack (window → instance → surface → device → VMA allocator). The integration tests are gated and un-skip as the vulkan bridges are implemented.
 
 The example **app code is still hand-written on purpose** (this is a learning project): `examples/event-logger/main.zig` and `examples/clear-color/main.zig` are stubs you fill in — `docs/clear-color.md` designs the first windowed app end-to-end, and the platform README's quick-start shows the input/window API. The libraries underneath them are real (above).
 

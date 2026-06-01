@@ -27,7 +27,7 @@ fn gate(implemented: bool) error{SkipZigTest}!void {
 const done = .{
     .instance_from_platform_extensions = true,
     .surface_handoff = true,
-    .full_stack = false,
+    .full_stack = true,
 };
 
 /// A platform `.vulkan` window + a Vulkan instance built from the platform's
@@ -45,7 +45,14 @@ const Bootstrap = struct {
         try volk.loadBase();
         const gipa = volk.getInstanceProcAddr();
         const vkb = vk.BaseWrapper.load(gipa);
+        // Request Vulkan 1.3 so the device promotes the 1.1+ core entry points VMA needs.
+        const app_info = vk.ApplicationInfo{
+            .application_version = 0,
+            .engine_version = 0,
+            .api_version = @bitCast(vk.API_VERSION_1_3),
+        };
         const instance = try vkb.createInstance(&.{
+            .p_application_info = &app_info,
             .enabled_extension_count = @intCast(exts.len),
             .pp_enabled_extension_names = exts.ptr,
         }, null);
