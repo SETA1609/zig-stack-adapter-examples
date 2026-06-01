@@ -78,6 +78,7 @@ The example **app code is still hand-written on purpose** (this is a learning pr
 
 ## Docs
 
+- [`docs/getting-started.md`](docs/getting-started.md) — **start here**: clone, build, run the tests, and the two-lib hand-off walkthrough
 - [`docs/vision.md`](docs/vision.md) — what this repo is for; the decoupled-but-interoperating north star
 - [`docs/mission.md`](docs/mission.md) — the concrete build/bridge/decoupling commitments
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — the release sequence (one ladder rung per release) + lib version gates
