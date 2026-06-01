@@ -28,8 +28,9 @@ zig build test-integration    # cross-lib tests: platform handles → vulkan ins
 - `event-logger` is **rung 0** (platform-only; the `nm` decoupling baseline). Its
   `main.zig` is a stub you hand-write — see [`event-logger.md`](event-logger.md)
   and the platform lib's `docs/getting-started.md`.
-- `test-integration` today: **instance + surface hand-off pass; `full_stack`
-  skips** until the vulkan VMA bridge lands.
+- `test-integration` today: **all 5 pass** — instance from the platform's
+  extensions, the surface hand-off, and the full stack (window → instance →
+  surface → device → VMA allocator).
 
 ## 3. The build model — libs first, link the artifact
 
