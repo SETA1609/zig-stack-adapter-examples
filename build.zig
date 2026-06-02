@@ -31,15 +31,22 @@ pub fn build(b: *std.Build) void {
         .shaderc = enable_shaderc,
     });
 
-    // Shared comptime surface bridge. Stays inert until vulkan_stack lands —
-    // shared/surface.zig is currently a stub with both imports commented out.
-    // const surface_mod = b.createModule(.{
-    //     .root_source_file = b.path("shared/surface.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // surface_mod.addImport("platform", platform_dep.module("platform"));
-    // surface_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
+    // Shared comptime surface bridge — the one place the two libs meet.
+    const surface_mod = b.createModule(.{
+        .root_source_file = b.path("shared/surface.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    surface_mod.addImport("platform", platform_dep.module("platform"));
+    surface_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
+
+    // Shared swapchain helper (renderer policy — lives here, not in the lib).
+    const swapchain_mod = b.createModule(.{
+        .root_source_file = b.path("shared/swapchain.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    swapchain_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
 
     // --- Rung 0: event-logger (platform-only) -----------------------------
     addExample(b, .{
@@ -51,25 +58,27 @@ pub fn build(b: *std.Build) void {
         .platform_dep = platform_dep,
     });
 
-    // --- Rung 1: clear-color (platform + vulkan_stack + surface) ---------
-    // Enable once vulkan_stack ships its `vulkan_stack` module + artifact.
-    // const clear_color = b.addExecutable(.{
-    //     .name = "clear-color",
-    //     .root_module = b.createModule(.{
-    //         .root_source_file = b.path("examples/clear-color/main.zig"),
-    //         .target = target, .optimize = optimize,
-    //     }),
-    // });
-    // clear_color.root_module.addImport("platform", platform_dep.module("platform"));
-    // clear_color.root_module.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
-    // clear_color.root_module.addImport("surface", surface_mod);
-    // clear_color.root_module.linkLibrary(platform_dep.artifact("platform"));
-    // clear_color.root_module.linkLibrary(vulkan_dep.artifact("vulkan_stack"));
-    // b.installArtifact(clear_color);
-    // const run_cc = b.addRunArtifact(clear_color);
-    // if (b.args) |args| run_cc.addArgs(args);
-    // b.step("clear-color", "Build + run the reactive clear-color example")
-    //     .dependOn(&run_cc.step);
+    // --- Rung 1: clear-color (platform + vulkan_stack + surface + swapchain) ---
+    const clear_color = b.addExecutable(.{
+        .name = "clear-color",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/clear-color/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    clear_color.root_module.addImport("platform", platform_dep.module("platform"));
+    clear_color.root_module.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
+    clear_color.root_module.addImport("surface", surface_mod);
+    clear_color.root_module.addImport("swapchain", swapchain_mod);
+    clear_color.root_module.linkLibrary(platform_dep.artifact("platform"));
+    clear_color.root_module.linkLibrary(vulkan_dep.artifact("vulkan_stack"));
+    b.installArtifact(clear_color);
+    const run_cc = b.addRunArtifact(clear_color);
+    if (b.args) |args| run_cc.addArgs(args);
+    b.step("clear-color", "Build + run the reactive clear-color example")
+        .dependOn(&run_cc.step);
 
     // --- `zig build test-integration` -------------------------------------
     // Cross-lib integration tests: the platform adapter hands native handles +
