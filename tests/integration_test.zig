@@ -18,6 +18,7 @@ const vk_stack = @import("vulkan_stack");
 const vk = vk_stack.vk;
 const volk = vk_stack.volk;
 const vma = vk_stack.vma;
+const shaderc = vk_stack.shaderc;
 
 fn gate(implemented: bool) error{SkipZigTest}!void {
     if (!implemented) return error.SkipZigTest;
@@ -77,7 +78,36 @@ const Bootstrap = struct {
         }
         return null;
     }
+
+    const Gpu = struct { physical: vk.PhysicalDevice, device: vk.Device, vkd: vk.DeviceWrapper };
+
+    /// Pick the first physical device and bring up a minimal logical device.
+    fn gpu(self: *Bootstrap) !Gpu {
+        var n: u32 = 1;
+        var physical: vk.PhysicalDevice = undefined;
+        _ = try self.vki.enumeratePhysicalDevices(self.instance, &n, @ptrCast(&physical));
+
+        const prio = [_]f32{1.0};
+        const qci = [_]vk.DeviceQueueCreateInfo{.{
+            .queue_family_index = 0,
+            .queue_count = 1,
+            .p_queue_priorities = &prio,
+        }};
+        const device = try self.vki.createDevice(physical, &.{
+            .queue_create_info_count = 1,
+            .p_queue_create_infos = &qci,
+        }, null);
+        volk.loadDevice(device);
+        const vkd = vk.DeviceWrapper.load(device, self.vki.dispatch.vkGetDeviceProcAddr.?);
+        return .{ .physical = physical, .device = device, .vkd = vkd };
+    }
 };
+
+/// Minimal valid GLSL — enough to exercise shaderc → SPIR-V → vkCreateShaderModule.
+const vert_src =
+    \\#version 450
+    \\void main() { gl_Position = vec4(0.0); }
+;
 
 test "instance: builds from the platform's required Vulkan extensions" {
     try gate(done.instance_from_platform_extensions);
@@ -121,25 +151,53 @@ test "full stack: window → instance → surface → device → VMA allocator" 
     const surface = (try bs.surface()) orelse return error.SkipZigTest;
     defer bs.vki.destroySurfaceKHR(bs.instance, surface, null);
 
-    var n: u32 = 1;
-    var physical: vk.PhysicalDevice = undefined;
-    _ = try bs.vki.enumeratePhysicalDevices(bs.instance, &n, @ptrCast(&physical));
+    const dev = try bs.gpu();
+    defer dev.vkd.destroyDevice(dev.device, null);
 
-    const prio = [_]f32{1.0};
-    const qci = [_]vk.DeviceQueueCreateInfo{.{
-        .queue_family_index = 0,
-        .queue_count = 1,
-        .p_queue_priorities = &prio,
-    }};
-    const device = try bs.vki.createDevice(physical, &.{
-        .queue_create_info_count = 1,
-        .p_queue_create_infos = &qci,
-    }, null);
-    volk.loadDevice(device);
-    const vkd = vk.DeviceWrapper.load(device, bs.vki.dispatch.vkGetDeviceProcAddr.?);
-    defer vkd.destroyDevice(device, null);
-
-    const allocator = try vma.createAllocator(.{ .physical_device = physical, .device = device, .instance = bs.instance });
+    const allocator = try vma.createAllocator(.{ .physical_device = dev.physical, .device = dev.device, .instance = bs.instance });
     defer vma.destroyAllocator(allocator);
     try std.testing.expect(@intFromPtr(allocator) != 0);
+}
+
+// --- shaderc (GLSL → SPIR-V) ----------------------------------------------
+// shaderc lives in the vulkan adapter and is compiled in only under
+// `-Dshaderc` (a lazy dep, built from source). These gate on
+// `shaderc.available`, so a default `zig build test-integration` skips them;
+// `zig build test-integration -Dshaderc` runs them for real.
+
+test "shaderc: a trivial GLSL vertex shader compiles to valid SPIR-V" {
+    try gate(shaderc.available);
+    const spv = try shaderc.compile(std.testing.allocator, vert_src, .vertex, .{}, null);
+    defer std.testing.allocator.free(spv);
+    try std.testing.expect(spv.len > 0);
+    try std.testing.expectEqual(@as(u32, 0x07230203), spv[0]); // SPIR-V magic word
+}
+
+test "shaderc: an invalid shader fails and fills the diagnostics message" {
+    try gate(shaderc.available);
+    var diag = shaderc.Diagnostics{};
+    defer if (diag.message.len > 0) std.testing.allocator.free(diag.message);
+    const result = shaderc.compile(std.testing.allocator, "#version 450\nthis is not glsl", .vertex, .{}, &diag);
+    try std.testing.expectError(error.ShaderCompilationFailed, result);
+    try std.testing.expect(diag.message.len > 0);
+}
+
+test "shaderc → vulkan: compiled SPIR-V is accepted by vkCreateShaderModule" {
+    try gate(shaderc.available);
+    var bs = try Bootstrap.init();
+    defer bs.deinit();
+
+    const dev = try bs.gpu();
+    defer dev.vkd.destroyDevice(dev.device, null);
+
+    const spv = try shaderc.compile(std.testing.allocator, vert_src, .vertex, .{}, null);
+    defer std.testing.allocator.free(spv);
+
+    // The cross-stack point: shaderc's output feeds the vulkan device unchanged.
+    const module = try dev.vkd.createShaderModule(dev.device, &.{
+        .code_size = spv.len * @sizeOf(u32),
+        .p_code = spv.ptr,
+    }, null);
+    defer dev.vkd.destroyShaderModule(dev.device, module, null);
+    try std.testing.expect(module != .null_handle);
 }
