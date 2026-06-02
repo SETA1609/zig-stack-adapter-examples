@@ -4,7 +4,9 @@
 >
 > **Goal:** tag examples **v0.1.0**.
 >
-> **Definition of done:** `zig build clear-color` opens a window whose clear-colour tracks input, recreates its swapchain on resize, and quits on ESC with **zero validation-layer messages**; `zig build event-logger` runs platform-only; **both `nm` decoupling checks print nothing**; CI builds every example on Linux + Windows and runs the headless-safe ones.
+> **Definition of done:** `zig build clear-color` opens a window whose clear-colour animates (a cycling palette), recreates its swapchain on resize, and quits on window close with **zero validation-layer messages**; `zig build event-logger` runs platform-only; **both `nm` decoupling checks print nothing**; CI builds every example on Linux + Windows and runs the headless-safe ones.
+>
+> **Status:** S1.1–S1.3, S1.5–S1.6 done (build wired; both Foundation rungs build + run). Remaining for the v0.1.0 tag: the two `nm` decoupling checks (S1.4, S1.7), CI (S1.8), and the tag itself (S1.9).
 >
 > Prereq: submodules added + pinned (`platform` → v0.6.0, `vulkan` → v0.2.0+) — see [`../libs/README.md`](../libs/README.md). ✅ submodules are already added.
 
@@ -12,17 +14,17 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
 
 ## Items
 
-- [ ] **S1.1** Enable the local-path deps. `build.zig.zon`: uncomment the `.platform` + `.vulkan_stack` path entries.
+- [x] **S1.1** Enable the local-path deps. `build.zig.zon`: uncomment the `.platform` + `.vulkan_stack` path entries.
   - Files: `build.zig.zon`
   - Acceptance: `zig build` resolves both deps from the local checkout (no network fetch)
   - Commit: `chore(zon): enable local-path deps into libs/`
 
-- [ ] **S1.2** Wire the build shell. `build.zig`: pull both `b.dependency(...)`, create the `surface` module (importing both lib modules), and add a small helper that builds one `examples/<name>/main.zig` exe — `addImport` the two lib modules + `surface`, `linkLibrary` both lib artifacts — plus a named run step. Remove the `_ = target/optimize` placeholders.
+- [x] **S1.2** Wire the build shell. `build.zig`: pull both `b.dependency(...)`, create the `surface` module (importing both lib modules), and add a small helper that builds one `examples/<name>/main.zig` exe — `addImport` the two lib modules + `surface`, `linkLibrary` both lib artifacts — plus a named run step. Remove the `_ = target/optimize` placeholders.
   - Files: `build.zig`
   - Acceptance: the helper compiles; `zig build --help` lists the example steps
   - Commit: `feat(build): wire deps + surface module + example exe helper`
 
-- [ ] **S1.3** Rung 0 — event-logger (platform only). `examples/event-logger/main.zig`: `renderer = .none`, pump events, print each `Event` + `actionJustPressed(.menu_pause)`; ESC quits. **No `vulkan_stack` import.**
+- [x] **S1.3** Rung 0 — event-logger (platform only). `examples/event-logger/main.zig`: `renderer = .none`, pump events, print each `Event` + `actionJustPressed(.menu_pause)`; ESC quits. **No `vulkan_stack` import.**
   - Files: `examples/event-logger/main.zig`, `build.zig` (register step)
   - Acceptance: `zig build event-logger` runs; events print; ESC quits
   - Commit: `feat(event-logger): platform-only event + action logger`
@@ -32,14 +34,15 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
   - Acceptance: `nm <event-logger> | grep -i 'vk[A-Z]\|VK_'` prints nothing; the script exits 0
   - Commit: `test(nm): platform-only binary drags no Vulkan symbols`
 
-- [ ] **S1.5** The surface bridge. `shared/surface.zig`: implement `createSurface(instance, window)` — a comptime switch on the target OS pairing platform's native-handle getter with vulkan's matching creator (X11/Wayland on Linux, Win32 on Windows). Per [`clear-color.md`](clear-color.md) § The surface bridge.
+- [x] **S1.5** The surface bridge. `shared/surface.zig`: implement `createSurface(instance, window)` — a comptime switch on the target OS pairing platform's native-handle getter with vulkan's matching creator (X11/Wayland on Linux, Win32 on Windows). Per [`clear-color.md`](clear-color.md) § The surface bridge.
   - Files: `shared/surface.zig`
   - Acceptance: compiles for `x86_64-linux-gnu` + `x86_64-windows-gnu`; the correct arm is selected at comptime
   - Commit: `feat(surface): comptime platform↔vulkan surface bridge`
 
-- [ ] **S1.6** Rung 1 — clear-color. `examples/clear-color/main.zig`: implement the full setup → loop → teardown from [`clear-color.md`](clear-color.md) — window, instance (+ validation layer in debug), surface via the bridge, device + swapchain, per-frame acquire → clear-to-reactive-colour → present, swapchain-recreate on resize, ESC quits.
-  - Files: `examples/clear-color/main.zig`, `build.zig` (register step)
-  - Acceptance: window opens; the clear-colour tracks mouse/keys; resize recreates the swapchain without crashing; ESC quits; **zero validation messages**
+- [x] **S1.6** Rung 1 — clear-color. `examples/clear-color/main.zig`: implement the full setup → loop → teardown from [`clear-color.md`](clear-color.md) — window, instance, surface via the bridge, device + swapchain (via the new `shared/swapchain.zig` helper), per-frame acquire → clear → present, swapchain-recreate on resize.
+  - Files: `examples/clear-color/main.zig`, `shared/swapchain.zig`, `build.zig` (register step)
+  - Acceptance: window opens; resize recreates the swapchain without crashing; quits on window close
+  - Note (as shipped): the clear-colour cycles a 6-colour palette one colour per second (a `platform.now()`-driven timer) rather than tracking mouse/keys, and quits on window close rather than ESC. The swapchain landed as a reusable `shared/swapchain.zig` helper.
   - Commit: `feat(clear-color): reactive clear-colour driving both adapters`
 
 - [ ] **S1.7** Decoupling check #2. A minimal headless-vulkan sketch (no window, offscreen image) → assert **no windowing symbols** (`SDL_`/`x11`/`wayland`). May be a `tests/` sketch built only for the check.

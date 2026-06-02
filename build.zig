@@ -4,11 +4,10 @@
 //! static-library artifact) and we LINK that artifact; we import the lib's
 //! module for the Zig API. See libs/README.md.
 //!
-//! Today wires only the **platform** side — enough to build the rung-0
-//! `event-logger` example, which is platform-only (PLATFORM ONLY per
-//! docs/event-logger.md). The vulkan_stack + surface wiring lights up once
-//! the vulkan-stack lib starts exposing its module/artifact; the commented
-//! blocks below mark the exact spots to uncomment.
+//! Wires rung 0 (`event-logger`, platform-only) and rung 1 (`clear-color`,
+//! platform + vulkan_stack + the shared surface/swapchain modules), plus the
+//! cross-lib `test-integration` step (with a `-Dshaderc` passthrough). Rungs
+//! ≥ 2 are added here as they land.
 
 const std = @import("std");
 

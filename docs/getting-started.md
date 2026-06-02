@@ -21,16 +21,21 @@ git submodule update --init --recursive
 
 ```sh
 zig build --help              # list steps
-zig build event-logger        # rung 0 — platform-only example (once its main.zig is written)
+zig build event-logger        # rung 0 — platform-only example
+zig build clear-color         # rung 1 — windowed clear-color (needs a display + Vulkan loader)
 zig build test-integration    # cross-lib tests: platform handles → vulkan instance + surface
 ```
 
-- `event-logger` is **rung 0** (platform-only; the `nm` decoupling baseline). Its
-  `main.zig` is a stub you hand-write — see [`event-logger.md`](event-logger.md)
-  and the platform lib's `docs/getting-started.md`.
-- `test-integration` today: **all 5 pass** — instance from the platform's
-  extensions, the surface hand-off, and the full stack (window → instance →
-  surface → device → VMA allocator).
+- `event-logger` is **rung 0** (platform-only; the `nm` decoupling baseline) —
+  implemented. See [`event-logger.md`](event-logger.md) and the platform lib's
+  `docs/getting-started.md`.
+- `clear-color` is **rung 1** (platform + vulkan together) — implemented: a window
+  whose swapchain image is cleared each frame to a cycling palette, recreated on
+  resize. See [`clear-color.md`](clear-color.md).
+- `test-integration` today: instance from the platform's extensions, the surface
+  hand-off, and the full stack (window → instance → surface → device → VMA
+  allocator). Add `-Dshaderc` to also run the shaderc GLSL→SPIR-V cross-stack
+  test (off by default — it builds shaderc from source).
 
 ## 3. The build model — libs first, link the artifact
 
@@ -56,17 +61,17 @@ platform.Window.create(.{ .renderer = .vulkan })
 ```
 
 `tests/integration_test.zig` is this handshake, end to end — read it as the
-canonical "two libs together" example. The `shared/surface.zig` stub is where a
-real app would put the comptime, per-OS bridge that picks the right
-`get*Handle` → `create*Surface` pair.
+canonical "two libs together" example. `shared/surface.zig` is the comptime,
+per-OS bridge that picks the right `get*Handle` → `create*Surface` pair, and
+`clear-color` drives the whole hand-off in a real windowed app.
 
 ## 5. The ladder
 
 Apps are built in a fixed order; each pulls a specific lib milestone into
 existence. See [`ladder.md`](ladder.md) for all rungs and
 [`ROADMAP.md`](ROADMAP.md) for the release sequence. Rung 0 (event-logger) and
-rung 1 (clear-color) are the Foundation phase — both unblocked on the lib side
-now (window + events + surface), so the remaining work there is the example code.
+rung 1 (clear-color) are the Foundation phase — both implemented and building;
+the remaining work for the v0.1.0 tag is the `nm` decoupling checks + CI.
 
 ## 6. The decoupling checks (`nm`)
 

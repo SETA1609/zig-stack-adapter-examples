@@ -4,8 +4,8 @@ Each app consumes both adapters via `libs/` (built + linked as artifacts) and pu
 
 | # | App | Develops platform → | Develops vulkan → | Validates |
 | --- | --- | --- | --- | --- |
-| 0 | **event-logger** *(warm-up, platform only)* | v0.6.0 | — | window + `Event` mapping; `nm` shows **no `vk*`** |
-| 1 | **clear-color** ← *first both-libs milestone* | v0.6.0 | v0.2.0 | the surface bridge end-to-end (window → surface → swapchain → clear → present) |
+| 0 ✅ | **event-logger** *(warm-up, platform only)* | v0.6.0 | — | window + `Event` mapping; `nm` shows **no `vk*`** — *implemented, builds + runs* |
+| 1 ✅ | **clear-color** ← *first both-libs milestone* | v0.6.0 | v0.2.0 | the surface bridge end-to-end (window → surface → swapchain → clear → present) — *implemented, builds + runs; swapchain lives in `../shared/swapchain.zig`* |
 | 2 | **hello-triangle** | (v0.6.0) | v0.3.0 (VMA) | first graphics pipeline + first vertex buffer + (precompiled) shaders — one static triangle |
 | 3 | **snake** | (v0.6.0) | v0.3.0 | a real fixed-timestep game loop, timing, action input — first actual *game* (reuses the triangle's pipeline for its quads) |
 | 4 | **asteroids** | (v0.6.0) | v0.3.0 | continuous float-physics loop + screen-wrap + transient entities — *no new lib surface; reinforces the loop* |
@@ -15,7 +15,7 @@ Each app consumes both adapters via `libs/` (built + linked as artifacts) and pu
 | 8 | **tetris** | v0.7.0 (input contexts) | v0.3.0 | pushing `ui_menu` on pause masks gameplay actions |
 | 9 | **replay-demo** | v0.7.0 (injection) | v0.3.0 | `injectAction` synthetic injection — record inputs, replay them as a deterministic ghost |
 | 10 | **pong** | v0.8.0 (gamepads) | v0.3.0 | multi-gamepad + analog axis modifiers |
-| 11 | **2048** | v0.8.0 (paths) | v0.3.0 | filesystem paths — save best score/board to `appDataDir`; bitmap-font text |
+| 11 | **2048** | v0.8.0 (paths) | v0.3.0 | filesystem paths — save best score/board to `applicationDataDirectory`; bitmap-font text |
 | 12 | **typing-game** | v0.8.0 (text input) | v0.3.0 | `text_input` / IME — type the falling words; bitmap-font text |
 | 13 | **life** | (v0.6.0) | v0.4.0 (shaders) | runtime GLSL→SPIR-V (shaderc) + compute + large dynamic buffer churn |
 | 14 | **particles** | (v0.6.0) | v0.4.0 | compute-driven particles — an SSBO stepped in a compute shader, drawn instanced |

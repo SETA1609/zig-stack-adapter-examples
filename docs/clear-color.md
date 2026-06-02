@@ -1,5 +1,7 @@
 # Reactive clear-color — design
 
+> **Status: implemented** — `examples/clear-color/main.zig` builds and runs (`zig build clear-color`). The surface bridge shipped as [`../shared/surface.zig`](../shared/surface.zig) and the swapchain as the reusable [`../shared/swapchain.zig`](../shared/swapchain.zig) helper (renderer policy — it lives in this repo, not the vulkan lib). As shipped, the clear-colour cycles a 6-colour palette one colour per second (a `platform.now()` timer) rather than tracking mouse/keys, and the app quits on window close. The rest of this doc is the original design.
+
 > The first app that exercises **both** adapters together. It's deliberately the smallest such program, so it isolates *"do the two libs talk to each other?"* from *"can I draw geometry?"*. If this runs clean under the validation layers, the whole decoupled-adapter architecture is proven and Snake (which adds buffers) becomes a safe next step.
 
 ## What it does
@@ -12,7 +14,7 @@ Opens a window through `platform`, builds a Vulkan surface + swapchain through `
 | --- | --- | --- |
 | platform | **v0.6.0** | window + event pump + `getX11Handle`/`getWin32Handle` + `requiredVulkanInstanceExtensions()` + minimal `bindAction`/`actionJustPressed` |
 | vulkan | **v0.2.0** | `vk` re-export (v0.1.0) + volk loader + `createX11Surface`/`createWin32Surface` |
-| this repo | — | `shared/surface.zig` (the bridge) |
+| this repo | — | `shared/surface.zig` (the bridge) + `shared/swapchain.zig` (the swapchain helper) |
 
 ## The surface bridge (`shared/surface.zig`)
 
@@ -49,7 +51,7 @@ createSurface(instance, window):
 
 ## Build
 
-Per the [libs-first / link-the-artifact model](../libs/README.md): the example imports the adapters' Zig modules and links their compiled static artifacts. Wire it in [`../build.zig`](../build.zig), then:
+Per the [libs-first / link-the-artifact model](../libs/README.md): the example imports the adapters' Zig modules and links their compiled static artifacts. It is already wired in [`../build.zig`](../build.zig):
 
 ```sh
 zig build clear-color
