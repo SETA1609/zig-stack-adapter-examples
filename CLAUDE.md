@@ -11,7 +11,7 @@ The two libs are git submodules under `libs/` and are **the user's own repos und
 - `libs/zig-cpp-platform-stack-adapter` — windowing + input (SDL3 backend), renderer-agnostic, drags **no Vulkan**. Exposes Zig module `platform`.
 - `libs/zig-cpp-vulkan-stack-adapter` — the Vulkan stack (vulkan-zig `vk` + volk + VMA + shaderc), drags **no windowing**. Exposes Zig module `vulkan_stack`.
 
-> **This repo is a deliberate scaffold.** `build.zig`, `shared/surface.zig`, and the `examples/*/main.zig` files are intentional stubs/TODOs — the app code is meant to be **hand-written** (this is a learning project). Empty function bodies and commented-out wiring are by design, not bugs. Read `docs/<app>.md` for the intended implementation before filling a stub in.
+> **The app code is hand-written by design** (this is a learning project) — read `docs/<app>.md` for the intended implementation before filling in any remaining stub. Rungs 0–1 are now implemented: `build.zig` is wired, `shared/surface.zig` + `shared/swapchain.zig` are real, and both `examples/event-logger/main.zig` and `examples/clear-color/main.zig` build and run. Rungs ≥ 2 are still stubs/TODOs — empty function bodies and commented-out wiring there are by design, not bugs.
 
 ## Core architecture: libs-first, link-the-artifact
 
@@ -28,7 +28,7 @@ Wiring names you need when editing `build.zig` (these are not interchangeable):
 | `platform` | `"platform"` | `"platform"` |
 | `vulkan_stack` | `"vulkan_stack"` | `"vulkan_stack"` |
 
-`shared/surface.zig` is compiled into a local module imported as `surface`. Follow the commented pattern already in `build.zig`.
+`shared/surface.zig` is compiled into a local module imported as `surface`, and `shared/swapchain.zig` into one imported as `swapchain`. Follow the pattern already in `build.zig`.
 
 ## The surface bridge + the decoupling invariant
 
@@ -41,9 +41,11 @@ Two `nm` decoupling checks are **required gates** (see `docs/ladder.md` § Decou
 
 A symbol leaking across that boundary is a bug to fix immediately, not to work around.
 
+The swapchain (`shared/swapchain.zig`) deliberately lives here too — it is **renderer policy** (format/present-mode choice, recreation, image views), which the vulkan lib leaves to the consumer. It is reused by every rung from `clear-color` up; it is **not** in the vulkan lib.
+
 ## The ladder (build order)
 
-Apps are built in a fixed sequence; each rung pulls a specific lib milestone into existence and unblocks the next. Current target is rung 1 (`clear-color`). Authoritative tables: `docs/ROADMAP.md` (release sequence + lib version gates) and `docs/ladder.md` (what each rung validates). Sprint 1 plan: `docs/sprint.md`.
+Apps are built in a fixed sequence; each rung pulls a specific lib milestone into existence and unblocks the next. Rungs 0 (`event-logger`) and 1 (`clear-color`) are implemented and build/run; the next target is rung 2 (`hello-triangle`). Authoritative tables: `docs/ROADMAP.md` (release sequence + lib version gates) and `docs/ladder.md` (what each rung validates). Sprint 1 plan: `docs/sprint.md`.
 
 Constraints from the ladder: apps stay **2D (quads + ortho)** to exercise the adapters without becoming a renderer; `hello-cube` (the tail rung) is the **only** 3D app and is a single untextured smoke test.
 
@@ -55,8 +57,9 @@ Requires **Zig 0.16+**.
 # After cloning (submodules are how the libs are present):
 git submodule update --init --recursive
 
-zig build                 # build everything (currently a no-op scaffold until build.zig is wired)
+zig build                 # build everything (event-logger + clear-color)
 zig build <example>       # build + run one example, e.g. `zig build clear-color` (named run steps, one per example)
+zig build test-integration         # cross-lib integration tests (add `-Dshaderc` to include the shaderc GLSL→SPIR-V test)
 zig build --help          # list the available example steps
 zig fmt --check .         # formatting check (CI runs this)
 ```

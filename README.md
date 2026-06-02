@@ -23,10 +23,11 @@ zig-stack-adapter-examples/
 │   ├── zig-cpp-platform-stack-adapter/   # add as submodule
 │   └── zig-cpp-vulkan-stack-adapter/     # add as submodule
 ├── shared/
-│   └── surface.zig               # stub — the comptime platform↔vulkan bridge (you write it)
+│   ├── surface.zig               # the comptime platform↔vulkan surface bridge (implemented)
+│   └── swapchain.zig             # reusable swapchain helper — renderer policy (implemented)
 ├── examples/
-│   ├── event-logger/main.zig     # rung 0 — platform-only (stub: hand-write it)
-│   └── clear-color/main.zig      # rung 1 — platform + vulkan (stub)
+│   ├── event-logger/main.zig     # rung 0 — platform-only (implemented)
+│   └── clear-color/main.zig      # rung 1 — platform + vulkan (implemented)
 ├── tests/
 │   └── integration_test.zig      # cross-lib tests (gated) — `zig build test-integration`
 ├── docs/
@@ -56,25 +57,27 @@ Each app pulls a specific adapter milestone into existence — see [`docs/ladder
 
 ## Status & how to run
 
-The build is wired and the libraries are partway up the ladder:
+The build is wired and the Foundation rungs (0–1) build and run:
 
-- **platform adapter** — v0.6.0 core implemented (window, events, time, action-mapped input, Vulkan hand-off).
-- **vulkan adapter** — `vk` re-export + pure-Zig `volk` loader + X11/Wayland surfaces + VMA (C++ bridge) implemented; shaderc + Win32/Android surfaces still stubbed.
-- **cross-lib hand-off works** — a platform `.vulkan` window's native handle becomes a Vulkan surface (proven by the integration tests below).
+- **platform adapter** — v0.6.0 core implemented (window, events, time, action-mapped input, window-state + mouse/cursor, Vulkan hand-off).
+- **vulkan adapter** — `vk` re-export + pure-Zig `volk` loader + X11/Wayland surfaces + VMA (C++ bridge) + shaderc (GLSL→SPIR-V) implemented; Win32/Android surfaces still stubbed.
+- **cross-lib hand-off works** — a platform `.vulkan` window's native handle becomes a Vulkan surface (proven by `clear-color` and the integration tests below).
+- **rung 0 (`event-logger`) and rung 1 (`clear-color`) are implemented** — `clear-color` opens a window, builds instance + device + swapchain from the platform's required extensions and native handle, and clears the swapchain image each frame (a 6-colour palette, one colour per second), recreating on resize.
 
 Clone with submodules, then:
 
 ```sh
 git submodule update --init --recursive
 
-zig build event-logger        # rung 0 — build + run the platform-only example (once you write its main.zig)
+zig build event-logger        # rung 0 — build + run the platform-only example
+zig build clear-color         # rung 1 — build + run the windowed clear-color (needs a display + Vulkan loader)
 zig build test-integration    # cross-lib tests: platform handles → vulkan instance + surface
 zig build --help              # list available steps
 ```
 
-`zig build test-integration` today: **all 5 pass** — instance built from the platform's extensions, the surface hand-off, and the full stack (window → instance → surface → device → VMA allocator). The integration tests are gated and un-skip as the vulkan bridges are implemented.
+`zig build test-integration` today: instance built from the platform's extensions, the surface hand-off, and the full stack (window → instance → surface → device → VMA allocator); add `-Dshaderc` to also run the shaderc GLSL→SPIR-V cross-stack test (off by default, since it builds shaderc from source). The integration tests are gated and un-skip as the vulkan bridges are implemented.
 
-The example **app code is still hand-written on purpose** (this is a learning project): `examples/event-logger/main.zig` and `examples/clear-color/main.zig` are stubs you fill in — `docs/clear-color.md` designs the first windowed app end-to-end, and the platform README's quick-start shows the input/window API. The libraries underneath them are real (above).
+`docs/clear-color.md` designs the first windowed app end-to-end (now implemented), and the platform README's quick-start shows the input/window API.
 
 ## Docs
 
