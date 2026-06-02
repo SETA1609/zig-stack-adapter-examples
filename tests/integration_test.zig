@@ -109,6 +109,7 @@ const vert_src =
     \\void main() { gl_Position = vec4(0.0); }
 ;
 
+// WHEN bootstrapping a Vulkan instance from the platform's required extensions · GIVEN a display server and Vulkan loader · THEN the created instance handle is non-null.
 test "instance: builds from the platform's required Vulkan extensions" {
     try gate(done.instance_from_platform_extensions);
     var bs = try Bootstrap.init();
@@ -116,6 +117,7 @@ test "instance: builds from the platform's required Vulkan extensions" {
     try std.testing.expect(@intFromEnum(bs.instance) != 0);
 }
 
+// WHEN reading platform.requiredVulkanInstanceExtensions · GIVEN a started platform · THEN the list is non-empty (the platform demands at least a surface extension).
 test "instance: the platform requires at least a surface extension" {
     try gate(done.instance_from_platform_extensions);
     try platform.init(.{});
@@ -123,6 +125,7 @@ test "instance: the platform requires at least a surface extension" {
     try std.testing.expect(platform.requiredVulkanInstanceExtensions().len > 0);
 }
 
+// WHEN handing a platform window's native handle to the vulkan adapter's surface creator · GIVEN a bootstrapped instance on a covered display server · THEN a non-null vk.SurfaceKHR is produced.
 test "surface: a platform window's native handle becomes a non-null Vulkan surface" {
     try gate(done.surface_handoff);
     var bs = try Bootstrap.init();
@@ -132,6 +135,7 @@ test "surface: a platform window's native handle becomes a non-null Vulkan surfa
     try std.testing.expect(surface != .null_handle);
 }
 
+// WHEN creating a surface, destroying it, then creating another from the window · GIVEN a bootstrapped instance · THEN the second surface is also non-null (the hand-off repeats).
 test "surface: hand-off works for a second freshly created window" {
     try gate(done.surface_handoff);
     var bs = try Bootstrap.init();
@@ -143,6 +147,7 @@ test "surface: hand-off works for a second freshly created window" {
     try std.testing.expect(b != .null_handle);
 }
 
+// WHEN walking the full chain window→instance→surface→device→VMA allocator · GIVEN a display server and Vulkan loader · THEN the VMA allocator is created non-null with no shared type crossing the lib boundary.
 test "full stack: window → instance → surface → device → VMA allocator" {
     try gate(done.full_stack);
     var bs = try Bootstrap.init();
@@ -165,6 +170,7 @@ test "full stack: window → instance → surface → device → VMA allocator" 
 // `shaderc.available`, so a default `zig build test-integration` skips them;
 // `zig build test-integration -Dshaderc` runs them for real.
 
+// WHEN compiling a trivial GLSL vertex shader via the vulkan adapter's shaderc · GIVEN shaderc available · THEN a non-empty SPIR-V slice is returned beginning with the magic word 0x07230203.
 test "shaderc: a trivial GLSL vertex shader compiles to valid SPIR-V" {
     try gate(shaderc.available);
     const spv = try shaderc.compile(std.testing.allocator, vert_src, .vertex, .{}, null);
@@ -173,6 +179,7 @@ test "shaderc: a trivial GLSL vertex shader compiles to valid SPIR-V" {
     try std.testing.expectEqual(@as(u32, 0x07230203), spv[0]); // SPIR-V magic word
 }
 
+// WHEN compiling invalid GLSL with a Diagnostics sink · GIVEN shaderc available · THEN compile returns error.ShaderCompilationFailed and the diagnostics message is non-empty.
 test "shaderc: an invalid shader fails and fills the diagnostics message" {
     try gate(shaderc.available);
     var diag = shaderc.Diagnostics{};
@@ -182,6 +189,7 @@ test "shaderc: an invalid shader fails and fills the diagnostics message" {
     try std.testing.expect(diag.message.len > 0);
 }
 
+// WHEN feeding shaderc's SPIR-V output unchanged into vkCreateShaderModule on a bootstrapped device · GIVEN shaderc available · THEN the device accepts it and returns a non-null shader module.
 test "shaderc → vulkan: compiled SPIR-V is accepted by vkCreateShaderModule" {
     try gate(shaderc.available);
     var bs = try Bootstrap.init();
