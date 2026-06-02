@@ -16,6 +16,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Pass through to vulkan_stack: build it with runtime GLSL→SPIR-V (shaderc).
+    // Off by default (the shaderc integration tests then skip); `-Dshaderc`
+    // turns it on, which fetches+builds shaderc from source inside the lib.
+    const enable_shaderc = b.option(bool, "shaderc", "Build vulkan_stack with runtime shaderc (GLSL→SPIR-V)") orelse false;
+
     const platform_dep = b.dependency("platform", .{
         .target = target,
         .optimize = optimize,
@@ -23,6 +28,7 @@ pub fn build(b: *std.Build) void {
     const vulkan_dep = b.dependency("vulkan_stack", .{
         .target = target,
         .optimize = optimize,
+        .shaderc = enable_shaderc,
     });
 
     // Shared comptime surface bridge. Stays inert until vulkan_stack lands —
