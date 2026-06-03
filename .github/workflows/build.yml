@@ -1,14 +1,25 @@
-name: build
+name: CI
 
+# The examples monorepo: consumes both adapter libs (git submodules under libs/)
+# and is the bed for the cross-lib integration tests + the `nm` decoupling gates.
+# Checks live in scripts/ci.sh (single source of truth, runnable locally); the
+# jobs here check out submodules + install the toolchain / Vulkan ICD.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
-    branches: [main]
+
+# Least privilege: these workflows only check out + build; no writes needed.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash # so scripts/ci.sh runs on the Windows runner too
 
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,17 +27,57 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          submodules: recursive # the two adapter libs live under libs/
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+          use-cache: true
+      - run: zig version
+      # fmt + build both rungs (event-logger + clear-color). No GPU/display
+      # needed to build (only to run the windowed example).
+      - name: CI checks
+        run: bash scripts/ci.sh check
 
-      - name: zig version
-        run: zig version
+  # The platform↔vulkan decoupling invariant: a platform-only binary drags in
+  # zero Vulkan. (nm over event-logger.)
+  decoupling:
+    name: decoupling check (nm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+          use-cache: true
+      - run: bash scripts/ci.sh decoupling
 
-      - name: Build
-        run: zig build
-
-      - name: Run
-        run: zig build run
+  # The full cross-lib handshake end to end against Mesa's lavapipe software ICD,
+  # with the window opened under xvfb (scripts/ci.sh adds xvfb-run when headless).
+  # Best-effort: the headless display + software-ICD env is runner-image-sensitive.
+  integration:
+    name: integration (lavapipe + xvfb)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install lavapipe + xvfb + X11 runtime (SDL opens an X11 window)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools \
+            xvfb libx11-6 libxext6 libxrandr2 libxi6 libxcursor1 libxfixes3
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+          use-cache: true
+      - name: cross-lib integration
+        run: bash scripts/ci.sh integration
