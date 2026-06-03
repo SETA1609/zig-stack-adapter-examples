@@ -37,6 +37,32 @@ zig build test-integration    # cross-lib tests: platform handles → vulkan ins
   allocator). Add `-Dshaderc` to also run the shaderc GLSL→SPIR-V cross-stack
   test (off by default — it builds shaderc from source).
 
+## 2a. Reproducible runs (scripts + Docker)
+
+The CI gates live in **`scripts/ci.sh`** so you can run exactly what CI runs,
+locally:
+
+```sh
+./scripts/ci.sh              # fmt + build both rungs
+./scripts/ci.sh decoupling   # nm: the platform-only binary has zero Vulkan symbols
+./scripts/ci.sh integration  # cross-lib test-integration -Dshaderc (auto-xvfb when headless)
+```
+
+For a clean-room environment, the repo ships a **Dockerfile** (build from a
+checkout *with submodules*):
+
+```sh
+git submodule update --init --recursive
+docker build -t stack-examples .
+docker run --rm stack-examples                                 # fmt + build
+docker run --rm stack-examples bash scripts/ci.sh integration  # headless via lavapipe + xvfb
+```
+
+The image carries both halves' runtime deps (X11/Wayland + xvfb for the window,
+lavapipe + libvulkan for a GPU-less Vulkan device). CI also runs a
+`lint-workflows` job that validates every workflow YAML (this repo's + both
+libs') with the bundled [`check-workflows` skill](../.claude/skills/check-workflows).
+
 ## 3. The build model — libs first, link the artifact
 
 `build.zig.zon` references the libs by **local path** (no git fetch); `build.zig`
