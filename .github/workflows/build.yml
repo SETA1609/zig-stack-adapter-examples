@@ -71,28 +71,7 @@ jobs:
           use-cache: true
       - run: bash scripts/ci.sh decoupling
 
-  # The full cross-lib handshake end to end against Mesa's lavapipe software ICD,
-  # with the window opened under xvfb (scripts/ci.sh adds xvfb-run when headless).
-  # Best-effort: the headless display + software-ICD env is runner-image-sensitive.
-  integration:
-    name: integration (lavapipe + xvfb)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    env:
-      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Install lavapipe + xvfb + X11 runtime (SDL opens an X11 window)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools \
-            xvfb libx11-6 libxext6 libxrandr2 libxi6 libxcursor1 libxfixes3
-      - name: Install Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
-          use-cache: true
-      - name: cross-lib integration
-        run: bash scripts/ci.sh integration
+  # The cross-lib integration suite needs a display (a window) AND a Vulkan
+  # device — neither is reliably available on a GitHub runner (a software ICD +
+  # xvfb is too runner-image-fragile). It's verified locally / in the dev
+  # container: `bash scripts/ci.sh integration` (auto-xvfb when headless).
