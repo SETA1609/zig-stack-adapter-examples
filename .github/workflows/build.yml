@@ -29,7 +29,7 @@ jobs:
         with:
           submodules: recursive # so it lints the libs' workflows too
       - name: Install PyYAML
-        run: python3 -m pip install --quiet pyyaml
+        run: python3 -c "import yaml" 2>/dev/null || python3 -m pip install --break-system-packages --quiet pyyaml
       - name: Validate workflow YAML (--strict)
         run: python3 .claude/skills/check-workflows/validate_workflows.py --strict
 
