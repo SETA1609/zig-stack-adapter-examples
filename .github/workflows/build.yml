@@ -18,6 +18,21 @@ defaults:
     shell: bash # so scripts/ci.sh runs on the Windows runner too
 
 jobs:
+  # Lint the workflow YAML itself (this repo's + both submodules') for safety:
+  # structure, action pinning, injection, least-privilege. Uses the vendored
+  # validator under .claude/skills/check-workflows — also a Claude Code skill.
+  lint-workflows:
+    name: lint workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # so it lints the libs' workflows too
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+      - name: Validate workflow YAML (--strict)
+        run: python3 .claude/skills/check-workflows/validate_workflows.py --strict
+
   build:
     name: build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
