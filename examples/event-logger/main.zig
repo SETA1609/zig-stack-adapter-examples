@@ -11,8 +11,32 @@
 //!
 //! Intentionally a stub — write the implementation by hand.
 
-// const platform = @import("platform");
+const std = @import("std");
+const platform = @import("platform");
+
+const Action = enum(u16) {
+    menu_pause,
+};
 
 pub fn main() !void {
-    // TODO(you): implement per ../../docs/event-logger.md
+    try platform.init(.{});
+    defer platform.deinit();
+    const window = try platform.Window.create(.{
+        .title = "event-logger",
+        .size = .{ .w = 800, .h = 600 },
+        .renderer = .none,
+    });
+    defer window.destroy();
+
+    platform.bindAction(Action.menu_pause, .{ .key = .escape });
+
+    while (!window.shouldClose()) {
+        platform.pollAllEvents();
+
+        while (platform.nextEvent()) |ev| {
+            std.debug.print("{any}\n", .{ev});
+            if (ev == .close) return;
+        }
+        if (platform.actionJustPressed(Action.menu_pause)) return;
+    }
 }
