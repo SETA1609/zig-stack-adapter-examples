@@ -8,7 +8,7 @@ Each release is a **lib-milestone phase** that delivers the ladder rungs sharing
 
 | Release | Phase | Rungs delivered | platform → | vulkan → |
 | --- | --- | --- | --- | --- |
-| **v0.1.0** ← *in progress* | Foundation | event-logger ✅, clear-color ✅ *(both build + run; tag pending the `nm` checks + CI)* | v0.6.0 | v0.2.0 |
+| **v0.1.0** ← *in progress* | Foundation | event-logger ✅, clear-color ✅ *(both build + run; platform-only `nm` check + CI live; tag pending the headless-vulkan `nm` check)* | v0.6.0 | v0.2.0 |
 | **v0.2.0** | First pipeline | hello-triangle | (v0.6.0) | v0.3.0 (VMA) |
 | **v0.3.0** | Games & texturing | snake, asteroids, breakout, space-invaders, image-viewer | v0.6.0 | v0.3.0 |
 | **v0.4.0** | Input depth | tetris, replay-demo | v0.7.0 | v0.3.0 |

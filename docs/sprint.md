@@ -6,7 +6,7 @@
 >
 > **Definition of done:** `zig build clear-color` opens a window whose clear-colour animates (a cycling palette), recreates its swapchain on resize, and quits on window close with **zero validation-layer messages**; `zig build event-logger` runs platform-only; **both `nm` decoupling checks print nothing**; CI builds every example on Linux + Windows and runs the headless-safe ones.
 >
-> **Status:** S1.1–S1.3, S1.5–S1.6 done (build wired; both Foundation rungs build + run). Remaining for the v0.1.0 tag: the two `nm` decoupling checks (S1.4, S1.7), CI (S1.8), and the tag itself (S1.9).
+> **Status:** S1.1–S1.6, S1.8 done (build wired; both Foundation rungs build + run; the platform-only `nm` decoupling check + CI are live via `scripts/ci.sh` + `.github/workflows/build.yml`). Remaining for the v0.1.0 tag: the headless-vulkan `nm` decoupling check (S1.7) and the tag itself (S1.9).
 >
 > Prereq: submodules added + pinned (`platform` → v0.6.0, `vulkan` → v0.2.0+) — see [`../libs/README.md`](../libs/README.md). ✅ submodules are already added.
 
@@ -29,7 +29,7 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
   - Acceptance: `zig build event-logger` runs; events print; ESC quits
   - Commit: `feat(event-logger): platform-only event + action logger`
 
-- [ ] **S1.4** Decoupling check #1. `scripts/nm-check.sh` (or a `zig build nm-check` step): assert the event-logger binary has **no `vk*` / `VK_`** symbols.
+- [x] **S1.4** Decoupling check #1. `scripts/nm-check.sh` (or a `zig build nm-check` step): assert the event-logger binary has **no `vk*` / `VK_`** symbols.
   - Files: `scripts/nm-check.sh`
   - Acceptance: `nm <event-logger> | grep -i 'vk[A-Z]\|VK_'` prints nothing; the script exits 0
   - Commit: `test(nm): platform-only binary drags no Vulkan symbols`
@@ -50,7 +50,7 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
   - Acceptance: `nm <bin> | grep -i 'SDL_\|x11\|wayland'` prints nothing
   - Commit: `test(nm): headless-vulkan binary drags no windowing symbols`
 
-- [ ] **S1.8** CI. `.github/workflows/build.yml`: build **every** example on `ubuntu-latest` + `windows-latest`; run the headless-safe ones (event-logger under `Xvfb`, the `nm` checks); do **not** run the windowed Vulkan app in CI. Replace the bare `zig build run` step (no such step exists once steps are named) with explicit per-example build/run. Drop macOS to `continue-on-error` (deferred) or remove it. Add `zig fmt --check`.
+- [x] **S1.8** CI. `.github/workflows/build.yml`: build **every** example on `ubuntu-latest` + `windows-latest`; run the headless-safe ones (event-logger under `Xvfb`, the `nm` checks); do **not** run the windowed Vulkan app in CI. Replace the bare `zig build run` step (no such step exists once steps are named) with explicit per-example build/run. Drop macOS to `continue-on-error` (deferred) or remove it. Add `zig fmt --check`.
   - Files: `.github/workflows/build.yml`
   - Acceptance: CI green on Linux + Windows
   - Commit: `ci: build all examples + run headless-safe ones on linux/windows`
