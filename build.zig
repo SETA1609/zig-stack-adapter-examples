@@ -98,6 +98,28 @@ pub fn build(b: *std.Build) void {
     const itests = b.addTest(.{ .root_module = itest_mod });
     b.step("test-integration", "Run the cross-lib integration tests (skipped until the vulkan bridges land)")
         .dependOn(&b.addRunArtifact(itests).step);
+
+    // --- `zig build test-opengl` ------------------------------------------
+    // Drives real OpenGL through the platform `.opengl` path. The platform lib
+    // ships no GL bindings — so the GL library is SYSTEM-LINKED here, in the
+    // consumer, and the test declares the entry points it calls. Platform-only;
+    // needs a display + a GL driver (Xvfb + Mesa llvmpipe works headless).
+    const gltest_mod = b.createModule(.{
+        .root_source_file = b.path("tests/opengl_test.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    gltest_mod.addImport("platform", platform_dep.module("platform"));
+    gltest_mod.linkLibrary(platform_dep.artifact("platform"));
+    switch (target.result.os.tag) {
+        .windows => gltest_mod.linkSystemLibrary("opengl32", .{}),
+        .macos => gltest_mod.linkFramework("OpenGL", .{}),
+        else => gltest_mod.linkSystemLibrary("GL", .{}),
+    }
+    const gltests = b.addTest(.{ .root_module = gltest_mod });
+    b.step("test-opengl", "Run the OpenGL integration test (system-linked GL; needs a display + GL driver)")
+        .dependOn(&b.addRunArtifact(gltests).step);
 }
 
 const ExampleOpts = struct {
