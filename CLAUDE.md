@@ -36,7 +36,7 @@ The two adapters are decoupled by design and meet at **exactly one place**: `sha
 
 Two `nm` decoupling checks are **required gates** (see `docs/ladder.md` § Decoupling checks), and protecting them constrains how you write apps:
 
-- A platform-only binary (`renderer = .none`) must show **zero `vk*`/`VK_`** symbols.
+- A platform-only binary (`renderer = .none`) must pull in **none of our Vulkan stack** — `nm` shows no vulkan-zig `vk.`-namespaced wrappers and no `volk`/`vma`/`shaderc_` symbols. (Bare `vk*` C symbols are *expected* and ignored: SDL3, the platform backend, ships its own Vulkan loader, so they appear in every SDL3-linked binary. The check matches what's unique to our stack — see `docs/ladder.md` § Decoupling checks; `scripts/ci.sh decoupling` is the source of truth.)
 - A headless-vulkan binary (no window) must show **zero `SDL_`/`x11`/`wayland`** symbols.
 
 A symbol leaking across that boundary is a bug to fix immediately, not to work around.

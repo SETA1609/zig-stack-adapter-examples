@@ -1,18 +1,23 @@
 //! Reactive clear-color — the first rung that drives BOTH adapters together.
 //!
-//! Opens a window (platform), builds a Vulkan instance + surface + swapchain
-//! (vulkan_stack + shared/surface.zig + shared/swapchain.zig), and clears the
-//! swapchain image each frame to an animated colour, presenting it. Quits on
-//! window close; recreates the swapchain on resize. No pipeline/shaders — the
-//! clear is a vkCmdClearColorImage with manual layout transitions.
+//! Opens a window (platform), builds a Vulkan instance + surface + swapchain,
+//! and clears the swapchain image each frame to an animated colour, presenting
+//! it. Quits on window close; recreates the swapchain on resize. No
+//! pipeline/shaders — the clear is a vkCmdClearColorImage with manual layout
+//! transitions.
+//!
+//! Everything is reached through the framework: `zgame.platform`,
+//! `zgame.vulkan_stack`/`zgame.vk`/`zgame.volk`, and the `zgame.surface` bridge
+//! + `zgame.swapchain` helper (all sharing one coherent module graph).
 
 const std = @import("std");
-const platform = @import("platform");
-const vulkan_stack = @import("vulkan_stack");
-const vk = vulkan_stack.vk;
-const volk = vulkan_stack.volk;
-const surface_bridge = @import("surface");
-const sc_mod = @import("swapchain");
+const zgame = @import("zgame");
+const platform = zgame.platform;
+const vulkan_stack = zgame.vulkan_stack;
+const vk = zgame.vk;
+const volk = zgame.volk;
+const surface_bridge = zgame.surface;
+const sc_mod = zgame.swapchain;
 const Swapchain = sc_mod.Swapchain;
 
 const max_frames = 2;

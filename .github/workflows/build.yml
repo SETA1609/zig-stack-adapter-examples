@@ -1,9 +1,11 @@
 name: CI
 
-# The examples monorepo: consumes both adapter libs (git submodules under libs/)
-# and is the bed for the cross-lib integration tests + the `nm` decoupling gates.
-# Checks live in scripts/ci.sh (single source of truth, runnable locally); the
-# jobs here check out submodules + install the toolchain / Vulkan ICD.
+# The examples monorepo: consumes the adapter libs *through* zGameLib (the
+# framework submodule under libs/, which owns the adapters) and is the bed for
+# the `nm` decoupling gates. The cross-lib behavioural tests live in zGameLib;
+# the integration/opengl jobs delegate into the submodule. Checks live in
+# scripts/ci.sh (single source of truth, runnable locally); the jobs here check
+# out submodules recursively + install the toolchain / Vulkan ICD.
 on:
   push:
     branches: ['**']

@@ -5,19 +5,21 @@
     .minimum_zig_version = "0.16.0",
 
     .dependencies = .{
-        // Local-path deps into libs/. Each lib builds from its local
-        // checkout; build.zig links the lib's compiled static-library
-        // artifact (libs-first / link-the-artifact — see libs/README.md).
-        .platform = .{ .path = "libs/zig-cpp-platform-stack-adapter" },
-        .vulkan_stack = .{ .path = "libs/zig-cpp-vulkan-stack-adapter" },
+        // Single dependency: zGameLib, the framework over the two adapters.
+        // Everything in this repo reaches the adapter libs (windowing/input +
+        // the vulkan stack) THROUGH zGameLib — never directly. zGameLib owns
+        // the adapter submodules + links their artifacts and re-exports them:
+        //   - `zgame`           — the full framework (platform + vulkan + glue)
+        //   - `zgame_platform`  — platform-only (links no vulkan; the gate path)
+        // It's a local-path dep into the libs/zGameLib submodule (libs-first /
+        // link-the-artifact — see libs/README.md).
+        .zgame = .{ .path = "libs/zGameLib" },
     },
 
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "shared",
         "examples",
-        "tests",
         "README.md",
         "LICENSE",
     },

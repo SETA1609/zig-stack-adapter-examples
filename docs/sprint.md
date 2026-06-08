@@ -29,9 +29,9 @@ Each `[ ]` is one atomic commit (Conventional Commits, subject ≤ 72 chars).
   - Acceptance: `zig build event-logger` runs; events print; ESC quits
   - Commit: `feat(event-logger): platform-only event + action logger`
 
-- [x] **S1.4** Decoupling check #1. `scripts/nm-check.sh` (or a `zig build nm-check` step): assert the event-logger binary has **no `vk*` / `VK_`** symbols.
-  - Files: `scripts/nm-check.sh`
-  - Acceptance: `nm <event-logger> | grep -i 'vk[A-Z]\|VK_'` prints nothing; the script exits 0
+- [x] **S1.4** Decoupling check #1 (`scripts/ci.sh decoupling`): assert the event-logger binary pulls in **none of our Vulkan stack** (vulkan-zig wrappers / volk / VMA / shaderc). Bare `vk*` C symbols are excluded — SDL3 ships its own Vulkan loader (see `ladder.md` § Decoupling checks).
+  - Files: `scripts/ci.sh`
+  - Acceptance: `nm <event-logger> | grep -E 'vk\.[A-Za-z]|volk[A-Z]|[Vv]ma[A-Z]|shaderc_[a-z]'` prints nothing; the script exits 0
   - Commit: `test(nm): platform-only binary drags no Vulkan symbols`
 
 - [x] **S1.5** The surface bridge. `shared/surface.zig`: implement `createSurface(instance, window)` — a comptime switch on the target OS pairing platform's native-handle getter with vulkan's matching creator (X11/Wayland on Linux, Win32 on Windows). Per [`clear-color.md`](clear-color.md) § The surface bridge.

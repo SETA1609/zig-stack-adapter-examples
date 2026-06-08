@@ -36,10 +36,14 @@ Initialises `platform`, creates a window with `renderer = .none`, then loops: pu
 - **Decoupling check #1 passes:**
 
   ```sh
-  nm zig-out/bin/event-logger | grep -i 'vk[A-Z]\|VK_'   # must print NOTHING
+  # none of OUR vulkan stack (vulkan-zig wrappers / volk / VMA / shaderc):
+  nm zig-out/bin/event-logger | grep -E 'vk\.[A-Za-z]|volk[A-Z]|[Vv]ma[A-Z]|shaderc_[a-z]'   # must print NOTHING
   ```
 
-  Any hit is a leak in the **platform** lib — fix it there, not here.
+  A hit means the **platform** lib pulled in our Vulkan stack — fix it there, not
+  here. (Bare `vk*` C symbols are *not* checked: SDL3 ships its own Vulkan loader,
+  so they appear in every SDL3-linked binary — see `docs/ladder.md` § Decoupling
+  checks. `scripts/ci.sh decoupling` is the source of truth.)
 - Zero crashes, zero validation-layer messages (there is no Vulkan to validate — listed for symmetry with `clear-color.md`).
 
 ## Build

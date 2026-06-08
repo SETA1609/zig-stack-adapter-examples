@@ -1,8 +1,9 @@
 //! Event logger — rung 0 warm-up, PLATFORM ONLY.
 //!
 //! Opens a window with `renderer = .none`, pumps events, prints each `Event`
-//! to stdout, and quits on ESC. **Imports no `vulkan_stack`** — this binary
-//! is the gate for the first `nm` decoupling check (no `vk*` / `VK_` symbols).
+//! to stdout, and quits on ESC. Reaches the platform adapter through the
+//! framework (`zgame.platform`) and **touches no vulkan** — this binary is the
+//! gate for the first `nm` decoupling check (no `vk*` / `VK_` symbols).
 //!
 //! Full design — frame loop, exact lib calls, success criteria:
 //!   ../../docs/event-logger.md
@@ -12,7 +13,8 @@
 //! Intentionally a stub — write the implementation by hand.
 
 const std = @import("std");
-const platform = @import("platform");
+const zgame = @import("zgame");
+const platform = zgame.platform;
 
 const Action = enum(u16) {
     menu_pause,

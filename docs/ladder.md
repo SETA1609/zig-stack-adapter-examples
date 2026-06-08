@@ -26,8 +26,18 @@ Each app consumes both adapters via `libs/` (built + linked as artifacts) and pu
 
 The architecture rests on each adapter dragging only its own concern. Two apps prove it — treat these as required:
 
-- **event-logger** (`renderer = .none`, platform only) → `nm <bin> | grep -i 'vk[A-Z]\|VK_'` must print **nothing** (platform drags no Vulkan).
+- **event-logger** (`renderer = .none`, platform only) → `nm <bin> | grep -E 'vk\.[A-Za-z]|volk[A-Z]|[Vv]ma[A-Z]|shaderc_[a-z]'` must print **nothing** (platform drags none of *our* Vulkan stack).
 - A **headless vulkan** sketch (no window, offscreen render) → `nm <bin> | grep -i 'SDL_\|x11\|wayland'` must print **nothing** (vulkan drags no windowing).
+
+> **Why not a bare `vk*` grep?** SDL3 (the platform backend) ships its own Vulkan
+> support — `SDL_Vulkan_CreateSurface` and an internal `vk*` function-pointer
+> table — so *any* SDL3-linked binary, even `renderer = .none`, contains bare
+> `vk*` symbols. Those belong to the platform backend, not to a Vulkan-stack leak.
+> The invariant we actually protect is "importing the platform adapter doesn't
+> drag in **our** Vulkan stack," so the check matches what's unique to it:
+> vulkan-zig's `vk.`-namespaced Zig wrappers (e.g. `vk.DeviceWrapper…`) plus the
+> volk / VMA / shaderc symbols. The bare `vk*` C names from SDL3 are expected and
+> ignored. Source of truth: `scripts/ci.sh decoupling`.
 
 ## Why hello-triangle sits between clear-color and snake
 

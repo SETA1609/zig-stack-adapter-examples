@@ -1,13 +1,24 @@
 //! Build script for zig-stack-adapter-examples.
 //!
-//! Model: each adapter lib builds itself once (its own build.zig produces a
-//! static-library artifact) and we LINK that artifact; we import the lib's
-//! module for the Zig API. See libs/README.md.
+//! Model: this repo reaches the adapter libs (windowing/input + the vulkan
+//! stack) **only through zGameLib** — never directly. zGameLib owns the adapter
+//! submodules, compiles them once into static-library artifacts, and re-exports
+//! two flavours of itself as importable modules:
 //!
-//! Wires rung 0 (`event-logger`, platform-only) and rung 1 (`clear-color`,
-//! platform + vulkan_stack + the shared surface/swapchain modules), plus the
-//! cross-lib `test-integration` step (with a `-Dshaderc` passthrough). Rungs
-//! ≥ 2 are added here as they land.
+//!   - `zgame`           — the full framework (platform + vulkan + the surface
+//!                         bridge + swapchain); links BOTH adapter artifacts.
+//!   - `zgame_platform`  — platform-only (windowing/input); links ONLY the
+//!                         platform artifact, so it drags no vulkan. This is the
+//!                         import path for any binary that must show zero
+//!                         vk*/VK_ symbols (the rung-0 decoupling gate, the
+//!                         OpenGL hand-off) while still going *through* the
+//!                         framework.
+//!
+//! Importing a module propagates its linked artifacts, so a single
+//! `addImport("zgame", …)` is all a target needs. Wires rung 0 (`event-logger`,
+//! platform-only) and rung 1 (`clear-color`); `-Dshaderc` is passed through to
+//! the vulkan stack. Rungs ≥ 2 land here. The cross-lib behavioural test suite
+//! lives in zGameLib (`cd libs/zGameLib && zig build test-tdd`), not here.
 
 const std = @import("std");
 
@@ -15,49 +26,34 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Pass through to vulkan_stack: build it with runtime GLSL→SPIR-V (shaderc).
-    // Off by default (the shaderc integration tests then skip); `-Dshaderc`
-    // turns it on, which fetches+builds shaderc from source inside the lib.
-    const enable_shaderc = b.option(bool, "shaderc", "Build vulkan_stack with runtime shaderc (GLSL→SPIR-V)") orelse false;
+    // Passed through to zGameLib → the vulkan stack: build it with runtime
+    // GLSL→SPIR-V (shaderc). Off by default (the shaderc integration tests then
+    // skip); `-Dshaderc` turns it on, which fetches+builds shaderc from source.
+    const enable_shaderc = b.option(bool, "shaderc", "Build the vulkan stack with runtime shaderc (GLSL→SPIR-V)") orelse false;
 
-    const platform_dep = b.dependency("platform", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const vulkan_dep = b.dependency("vulkan_stack", .{
+    const zgame_dep = b.dependency("zgame", .{
         .target = target,
         .optimize = optimize,
         .shaderc = enable_shaderc,
     });
+    const zgame_mod = zgame_dep.module("zgame"); // full framework (platform + vulkan)
+    const zgame_platform_mod = zgame_dep.module("zgame_platform"); // platform-only (no vulkan)
 
-    // Shared comptime surface bridge — the one place the two libs meet.
-    const surface_mod = b.createModule(.{
-        .root_source_file = b.path("shared/surface.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    surface_mod.addImport("platform", platform_dep.module("platform"));
-    surface_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
-
-    // Shared swapchain helper (renderer policy — lives here, not in the lib).
-    const swapchain_mod = b.createModule(.{
-        .root_source_file = b.path("shared/swapchain.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    swapchain_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
-
-    // --- Rung 0: event-logger (platform-only) -----------------------------
+    // --- Rung 0: event-logger (platform-only) ------------------------------
+    // Goes through the framework's platform-only flavour: it links no vulkan, so
+    // the binary stays clean for rung 0's `nm` decoupling gate (zero vk*/VK_) —
+    // and `zgame.vk` & friends literally don't exist on this module, so the
+    // decoupling is enforced by the type system, not just by the gate.
     addExample(b, .{
         .name = "event-logger",
         .source = "examples/event-logger/main.zig",
         .description = "Build + run the platform-only event logger (rung 0)",
         .target = target,
         .optimize = optimize,
-        .platform_dep = platform_dep,
+        .zgame_mod = zgame_platform_mod,
     });
 
-    // --- Rung 1: clear-color (platform + vulkan_stack + surface + swapchain) ---
+    // --- Rung 1: clear-color (the full `zgame` framework) ------------------
     const clear_color = b.addExecutable(.{
         .name = "clear-color",
         .root_module = b.createModule(.{
@@ -67,59 +63,18 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    clear_color.root_module.addImport("platform", platform_dep.module("platform"));
-    clear_color.root_module.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
-    clear_color.root_module.addImport("surface", surface_mod);
-    clear_color.root_module.addImport("swapchain", swapchain_mod);
-    clear_color.root_module.linkLibrary(platform_dep.artifact("platform"));
-    clear_color.root_module.linkLibrary(vulkan_dep.artifact("vulkan_stack"));
+    clear_color.root_module.addImport("zgame", zgame_mod);
     b.installArtifact(clear_color);
     const run_cc = b.addRunArtifact(clear_color);
     if (b.args) |args| run_cc.addArgs(args);
     b.step("clear-color", "Build + run the reactive clear-color example")
         .dependOn(&run_cc.step);
 
-    // --- `zig build test-integration` -------------------------------------
-    // Cross-lib integration tests: the platform adapter hands native handles +
-    // required extensions to the vulkan adapter, which makes an instance +
-    // surface (+ device + allocator). Links BOTH artifacts. Gated/skipped until
-    // the vulkan bridges land (see tests/integration_test.zig); needs a display
-    // server + a Vulkan loader.
-    const itest_mod = b.createModule(.{
-        .root_source_file = b.path("tests/integration_test.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-    itest_mod.addImport("platform", platform_dep.module("platform"));
-    itest_mod.addImport("vulkan_stack", vulkan_dep.module("vulkan_stack"));
-    itest_mod.linkLibrary(platform_dep.artifact("platform"));
-    itest_mod.linkLibrary(vulkan_dep.artifact("vulkan_stack"));
-    const itests = b.addTest(.{ .root_module = itest_mod });
-    b.step("test-integration", "Run the cross-lib integration tests (skipped until the vulkan bridges land)")
-        .dependOn(&b.addRunArtifact(itests).step);
-
-    // --- `zig build test-opengl` ------------------------------------------
-    // Drives real OpenGL through the platform `.opengl` path. The platform lib
-    // ships no GL bindings — so the GL library is SYSTEM-LINKED here, in the
-    // consumer, and the test declares the entry points it calls. Platform-only;
-    // needs a display + a GL driver (Xvfb + Mesa llvmpipe works headless).
-    const gltest_mod = b.createModule(.{
-        .root_source_file = b.path("tests/opengl_test.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-    gltest_mod.addImport("platform", platform_dep.module("platform"));
-    gltest_mod.linkLibrary(platform_dep.artifact("platform"));
-    switch (target.result.os.tag) {
-        .windows => gltest_mod.linkSystemLibrary("opengl32", .{}),
-        .macos => gltest_mod.linkFramework("OpenGL", .{}),
-        else => gltest_mod.linkSystemLibrary("GL", .{}),
-    }
-    const gltests = b.addTest(.{ .root_module = gltest_mod });
-    b.step("test-opengl", "Run the OpenGL integration test (system-linked GL; needs a display + GL driver)")
-        .dependOn(&b.addRunArtifact(gltests).step);
+    // NOTE: the cross-lib behavioural suite (the integration + OpenGL hand-off
+    // tests) lives **inside zGameLib**, not here — it's part of the framework's
+    // own contract. Run it from the submodule:
+    //   cd libs/zGameLib && zig build test-tdd   (add -Dshaderc for the GLSL test)
+    // This repo only builds + runs the example rungs.
 }
 
 const ExampleOpts = struct {
@@ -128,7 +83,8 @@ const ExampleOpts = struct {
     description: []const u8,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    platform_dep: *std.Build.Dependency,
+    /// The zGameLib module this example imports as `zgame` (full or platform-only).
+    zgame_mod: *std.Build.Module,
 };
 
 fn addExample(b: *std.Build, opts: ExampleOpts) void {
@@ -140,8 +96,8 @@ fn addExample(b: *std.Build, opts: ExampleOpts) void {
             .optimize = opts.optimize,
         }),
     });
-    exe.root_module.addImport("platform", opts.platform_dep.module("platform"));
-    exe.root_module.linkLibrary(opts.platform_dep.artifact("platform"));
+    // Single import: `zgame` carries the API and propagates the linked artifacts.
+    exe.root_module.addImport("zgame", opts.zgame_mod);
     b.installArtifact(exe);
 
     const run = b.addRunArtifact(exe);
