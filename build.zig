@@ -70,6 +70,25 @@ pub fn build(b: *std.Build) void {
     b.step("clear-color", "Build + run the reactive clear-color example")
         .dependOn(&run_cc.step);
 
+    // --- Rung 1, reprise: clear-color-2 (same app, on the zGameLib abstractions)
+    // Identical behaviour to clear-color, but the Vulkan bring-up + frames-in-flight
+    // come from the framework (`zgame.Gpu` / `zgame.FrameRing` / `transitionImage`).
+    const clear_color_2 = b.addExecutable(.{
+        .name = "clear-color-2",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/clear-color-2/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    clear_color_2.root_module.addImport("zgame", zgame_mod);
+    b.installArtifact(clear_color_2);
+    const run_cc2 = b.addRunArtifact(clear_color_2);
+    if (b.args) |args| run_cc2.addArgs(args);
+    b.step("clear-color-2", "Build + run clear-color rebuilt on the zGameLib abstractions")
+        .dependOn(&run_cc2.step);
+
     // NOTE: the cross-lib behavioural suite (the integration + OpenGL hand-off
     // tests) lives **inside zGameLib**, not here — it's part of the framework's
     // own contract. Run it from the submodule:
